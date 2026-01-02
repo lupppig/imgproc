@@ -19,7 +19,7 @@ func (h *HelpExecutable) Run(ctx context.Context) {
 	FLAGS:
 	--input     Input image or directory (required)
 	--output    Output directory (required)
-	--workers   Number of concurrent workers (default: 4)
+	--workers   Number of concurrent workers (default: total number of user OS cores)
 	-h, --help  Show this help message
 
 	EXAMPLES:
