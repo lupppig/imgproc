@@ -1,5 +1,5 @@
 APP_NAME := imgproc
-CMD_DIR := cmd/
+CMD_DIR := cmd/imgproc
 BUILD_DIR := bin
 
 GO := go
