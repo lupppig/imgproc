@@ -35,7 +35,6 @@ func fanoutPath(base string, size int, format string) string {
 }
 
 func ProcessImage(job ImageJob, progress func(processed int)) error {
-
 	ctx := context.Background()
 
 	img, inputFormat, err := transform.Decode(job.Input)

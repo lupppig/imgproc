@@ -70,6 +70,7 @@ func (p *ProcessCommand) Run(ctx context.Context) error {
 	jobs := make(chan pipeline.ImageJob)
 
 	metrics := pipeline.NewMetrics()
+	metrics.Start()
 
 	pool := pipeline.NewWorkerPool(
 		p.cfg.Workers,
@@ -97,6 +98,7 @@ func (p *ProcessCommand) Run(ctx context.Context) error {
 	wg.Wait()
 
 	fmt.Println()
+	metrics.End()
 	metrics.Print()
 
 	return nil
