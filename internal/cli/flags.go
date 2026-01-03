@@ -1,46 +1,46 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"io"
 	"runtime"
 
-	"github.com/lupppig/imgproc/internal/app"
-	"github.com/lupppig/imgproc/internal/config"
+	"github.com/lupppig/imgproc/internal/commands"
 )
 
-func Parse(args []string, writer io.Writer) app.Flag {
+type Flag interface {
+	Run(ctx context.Context)
+	Error() error
+}
+
+func Parse(args []string, out io.Writer) (commands.Command, error) {
 	fs := flag.NewFlagSet("imgproc", flag.ContinueOnError)
-	fs.SetOutput(writer)
+	fs.SetOutput(out)
 
-	cfg := new(config.Config)
+	cfg := commands.ProcessConfig{}
+	help := false
 
-	var help bool
-	flag.StringVar(&cfg.InputDir, "input", "", "Input directory")
-	flag.StringVar(&cfg.OutputDir, "output", "", "Output directory")
-	flag.IntVar(&cfg.ResizeWidth, "resize", 0, "Resize width")
-	flag.StringVar(&cfg.Format, "format", "jpeg", "Output format")
-	flag.IntVar(&cfg.Quality, "quality", 80, "JPEG quality")
-	flag.IntVar(&cfg.Workers, "workers", runtime.NumCPU(), "Processing workers")
-	flag.IntVar(&cfg.MaxInflight, "max-inflight", 50, "Max images in pipeline")
-	flag.BoolVar(&help, "help", false, "print command help")
+	fs.StringVar(&cfg.InputDir, "input", "", "Input directory")
+	fs.StringVar(&cfg.OutputDir, "output", "", "Output directory")
+	fs.IntVar(&cfg.ResizeWidth, "resize", 0, "Resize width")
+	fs.StringVar(&cfg.Format, "format", "jpeg", "Output format")
+	fs.IntVar(&cfg.Quality, "quality", 80, "Image quality")
+	fs.IntVar(&cfg.Workers, "workers", runtime.NumCPU(), "Workers")
+	fs.IntVar(&cfg.MaxInflight, "max-inflight", 50, "Inflight limit")
+	fs.BoolVar(&help, "help", false, "Show help")
 
-	flag.Parse()
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
 
 	if help {
-		return &HelpExecutable{}
+		return &commands.HelpCommand{}, nil
 	}
 
-	if err := Validate(cfg); err != nil {
-		return &ProcessCommand{Err: err}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 
-	p := &ProcessCommand{
-		InputDir:    cfg.InputDir,
-		Format:      cfg.Format,
-		ResizeWidth: cfg.ResizeWidth,
-		Quality:     cfg.Quality,
-		MaxInflight: cfg.MaxInflight,
-	}
-	return p
+	return commands.NewProcessCommand(cfg), nil
 }
