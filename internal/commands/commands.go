@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"github.com/lupppig/imgproc/internal/pipeline"
 )
@@ -43,6 +44,8 @@ type ProcessConfig struct {
 	Format      string
 	Quality     int
 	Workers     int
+	Watermark   bool
+	StripEXIF   bool
 	MaxInflight int
 }
 
@@ -65,6 +68,7 @@ func NewProcessCommand(cfg ProcessConfig) *ProcessCommand {
 
 func (p *ProcessCommand) Run(ctx context.Context) error {
 	jobs := make(chan pipeline.ImageJob)
+
 	metrics := pipeline.NewMetrics()
 
 	pool := pipeline.NewWorkerPool(
@@ -74,13 +78,26 @@ func (p *ProcessCommand) Run(ctx context.Context) error {
 	)
 
 	var wg sync.WaitGroup
+
 	pool.Start(ctx, jobs, &wg)
 
-	err := ProduceJobs(ctx, p.cfg, jobs)
+	pool.StartProgress(ctx)
+
+	totalJobs, err := ProduceJobs(ctx, p.cfg, jobs)
+	if err != nil {
+		close(jobs)
+		wg.Wait()
+		return err
+	}
+
+	atomic.StoreInt64(&metrics.Total, int64(totalJobs))
+
 	close(jobs)
 
 	wg.Wait()
+
+	fmt.Println()
 	metrics.Print()
 
-	return err
+	return nil
 }

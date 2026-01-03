@@ -14,4 +14,6 @@ type Config struct {
 	Quality     int
 	Workers     int
 	MaxInflight int
+	Watermark   bool
+	StripEXIF   bool
 }

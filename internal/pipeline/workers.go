@@ -55,7 +55,9 @@ func (p *WorkerPool) process(ctx context.Context, job ImageJob) {
 		default:
 		}
 
-		err := ProcessImage(job)
+		err := ProcessImage(job, func(size int) {
+			// optional: per-thumbnail progress
+		})
 		if err == nil {
 			p.metrics.Success()
 			return

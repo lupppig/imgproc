@@ -15,24 +15,32 @@ var supportedExt = map[string]bool{
 	".webp": true,
 }
 
-func ProduceJobs(ctx context.Context, cfg ProcessConfig, jobs chan<- pipeline.ImageJob) error {
+func ProduceJobs(ctx context.Context, cfg ProcessConfig, jobs chan<- pipeline.ImageJob) (int, error) {
 	info, err := os.Stat(cfg.InputDir)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if info.IsDir() {
 		return walkDir(ctx, cfg, jobs)
 	}
 
-	return sendJob(ctx, cfg, cfg.InputDir, jobs)
+	err = sendJob(ctx, cfg, cfg.InputDir, jobs)
+	if err != nil {
+		return 0, err
+	}
+	return 1, nil
 }
 
-func walkDir(ctx context.Context, cfg ProcessConfig, jobs chan<- pipeline.ImageJob) error {
+func walkDir(ctx context.Context, cfg ProcessConfig, jobs chan<- pipeline.ImageJob) (int, error) {
+	total := 0
 
-	return filepath.WalkDir(cfg.InputDir, func(path string, d os.DirEntry, err error) error {
+	err := filepath.Walk(cfg.InputDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		if info.IsDir() {
+			return nil
 		}
 
 		select {
@@ -41,33 +49,38 @@ func walkDir(ctx context.Context, cfg ProcessConfig, jobs chan<- pipeline.ImageJ
 		default:
 		}
 
-		if d.IsDir() {
-			return nil
+		if err := sendJob(ctx, cfg, path, jobs); err != nil {
+			return err
 		}
-
-		if !isSupported(path) {
-			return nil
-		}
-
-		return sendJob(ctx, cfg, path, jobs)
+		total++
+		return nil
 	})
-}
 
-func sendJob(ctx context.Context, cfg ProcessConfig, input string, jobs chan<- pipeline.ImageJob) error {
-
-	job := pipeline.ImageJob{
-		Input:        input,
-		Output:       outputPath(cfg.OutputDir, input),
-		Format:       cfg.Format,
-		ResizeWidth:  cfg.ResizeWidth,
-		Quality:      cfg.Quality,
-		AttemptsLeft: 3,
+	if err != nil {
+		return total, err
 	}
 
+	return total, nil
+}
+
+func sendJob(ctx context.Context, cfg ProcessConfig, path string, jobs chan<- pipeline.ImageJob) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case jobs <- job:
-		return nil
+	default:
 	}
+
+	job := pipeline.ImageJob{
+		Input:        path,
+		Output:       filepath.Join(cfg.OutputDir, filepath.Base(path)),
+		Format:       cfg.Format,
+		ResizeWidth:  cfg.ResizeWidth,
+		Quality:      cfg.Quality,
+		AttemptsLeft: 3, // retries
+		StripEXIF:    cfg.StripEXIF,
+		Watermark:    cfg.Watermark,
+	}
+
+	jobs <- job
+	return nil
 }

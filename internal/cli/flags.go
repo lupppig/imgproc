@@ -1,18 +1,12 @@
 package cli
 
 import (
-	"context"
 	"flag"
 	"io"
 	"runtime"
 
 	"github.com/lupppig/imgproc/internal/commands"
 )
-
-type Flag interface {
-	Run(ctx context.Context)
-	Error() error
-}
 
 func Parse(args []string, out io.Writer) (commands.Command, error) {
 	fs := flag.NewFlagSet("imgproc", flag.ContinueOnError)
@@ -28,6 +22,8 @@ func Parse(args []string, out io.Writer) (commands.Command, error) {
 	fs.IntVar(&cfg.Quality, "quality", 80, "Image quality")
 	fs.IntVar(&cfg.Workers, "workers", runtime.NumCPU(), "Workers")
 	fs.IntVar(&cfg.MaxInflight, "max-inflight", 50, "Inflight limit")
+	fs.BoolVar(&cfg.Watermark, "watermark", false, "remove watermake from image background")
+	fs.BoolVar(&cfg.StripEXIF, "strip-exif", false, "strip exif from image")
 	fs.BoolVar(&help, "help", false, "Show help")
 
 	if err := fs.Parse(args); err != nil {

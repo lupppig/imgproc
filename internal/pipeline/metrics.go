@@ -1,8 +1,10 @@
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
+	"time"
 )
 
 type Metrics struct {
@@ -10,6 +12,7 @@ type Metrics struct {
 	failed    int64
 	retries   int64
 	cancelled int64
+	Total     int64
 }
 
 func NewMetrics() *Metrics {
@@ -30,4 +33,26 @@ Processed:
   Cancelled: %d
 `,
 		m.success, m.failed, m.retries, m.cancelled)
+}
+
+func (p *WorkerPool) StartProgress(ctx context.Context) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				fmt.Printf(
+					"\rProcessed %d/%d | Success:%d Retry:%d Failed:%d",
+					atomic.LoadInt64(&p.metrics.success)+atomic.LoadInt64(&p.metrics.failed),
+					atomic.LoadInt64(&p.metrics.Total),
+					atomic.LoadInt64(&p.metrics.success),
+					atomic.LoadInt64(&p.metrics.retries),
+					atomic.LoadInt64(&p.metrics.failed),
+				)
+			}
+		}
+	}()
 }
