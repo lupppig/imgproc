@@ -1,8 +1,4 @@
-Absolutely! Let’s make the README **clean, professional, and fully ready** for your `imgproc` project. I’ll format it nicely, organize sections logically, and remove any redundant wording.
 
----
-
-````markdown
 # imgproc
 
 **imgproc** is a high-performance, concurrent CLI tool for image processing built in Go.  
@@ -24,7 +20,6 @@ It supports a modular, step-based pipeline with worker pools, retries, live prog
 - **Retry Mechanism** – retries failed jobs automatically  
 - **Automatic Output Directory Creation** – no need to pre-create folders  
 
----
 
 ## Installation
 
